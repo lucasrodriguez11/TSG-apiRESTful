@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -41,16 +42,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = ex.getBindingResult()
-            .getFieldErrors()
-            .stream()
-            .collect(Collectors.toMap(
-                FieldError::getField,
-                fieldError -> fieldError.getDefaultMessage() != null ? 
-                    fieldError.getDefaultMessage() : "Error de validación"
-            ));
-            
-
+        // Agrupamos los mensajes de error para cada campo en una lista
+        Map<String, List<String>> errors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        FieldError::getField,
+                        Collectors.mapping(
+                                fieldError -> fieldError.getDefaultMessage() != null ?
+                                        fieldError.getDefaultMessage() : "Error de validación",
+                                Collectors.toList()
+                        )
+                ));
         return createErrorResponse(HttpStatus.BAD_REQUEST, "Error de validación", errors);
     }
 
@@ -58,8 +61,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleGlobalException(Exception ex) {
         log.error("Error no manejado:", ex);
         return createErrorResponse(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            "Ha ocurrido un error interno en el servidor"
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Ha ocurrido un error interno en el servidor"
         );
     }
 
@@ -67,16 +70,13 @@ public class GlobalExceptionHandler {
         return createErrorResponse(status, message, null);
     }
 
-    private ResponseEntity<?> createErrorResponse(
-            HttpStatus status, 
-            String message, 
-            Map<String, String> additionalData) {
+    private ResponseEntity<?> createErrorResponse(HttpStatus status, String message, Map<String, ?> additionalData) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
-        
+
         if (additionalData != null) {
             body.put("details", additionalData);
         }

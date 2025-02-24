@@ -30,17 +30,37 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
+    /**
+     * Genera un token JWT para el usuario dado.
+     *
+     * El token contendrá:
+     * - "sub": El sujeto del token, que es el username.
+     * - "userId": Un claim personalizado que almacena el ID del usuario.
+     * - "iat": La fecha y hora de emisión del token (Issued At).
+     * - "exp": La fecha y hora de expiración del token (Expiration).
+     *
+     * @param userDetails los detalles del usuario
+     * @return token JWT generado
+     */
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        if (userDetails instanceof CustomUserDetails) {
+            Long id = ((CustomUserDetails) userDetails).getId();
+            claims.put("userId", id);
+        }
         return createToken(claims, userDetails.getUsername());
     }
 
     private String createToken(Map<String, Object> claims, String subject) {
+        long nowMillis = System.currentTimeMillis();
+        Date now = new Date(nowMillis);
+        Date expiration = new Date(nowMillis + jwtExpiration);
+
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .setIssuedAt(now)       // "iat": momento en que se emitió el token
+                .setExpiration(expiration) // "exp": momento en que expira el token
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }

@@ -1,4 +1,4 @@
-package com.tsg.application.rest.dto;
+package com.tsg.application.rest.dto.response;
 
 import lombok.Builder;
 import lombok.Data;

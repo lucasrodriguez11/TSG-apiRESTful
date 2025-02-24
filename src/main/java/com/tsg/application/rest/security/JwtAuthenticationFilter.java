@@ -25,17 +25,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
-        // Excluir del filtro las peticiones a /api/auth/** (por ejemplo,
-        // /api/auth/register y /api/auth/login)
-
-        
-        if (request.getServletPath().startsWith("/api/auth/")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
         try {
             getJwtFromRequest(request)
                     .filter(jwtUtil::validateToken)
@@ -53,6 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+
 
     private Optional<String> getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");

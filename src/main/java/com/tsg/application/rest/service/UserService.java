@@ -1,6 +1,7 @@
 package com.tsg.application.rest.service;
 
-
+import com.tsg.application.rest.dto.request.UserRequest;
+import com.tsg.application.rest.dto.response.UserResponse;
 import com.tsg.application.rest.exception.ResourceNotFoundException;
 import com.tsg.application.rest.model.User;
 import com.tsg.application.rest.repository.UserRepository;
@@ -24,35 +25,57 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+    public UserResponse getUserResponseById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .build();
     }
 
     @Transactional
-    public User createUser(User user) {
-        if (userRepository.existsByUsername(user.getUsername())) {
+    public void createUser(User userRequest) {
+        if (userRepository.existsByUsername(userRequest.getUsername())) {
             throw new IllegalArgumentException("El nombre de usuario ya está en uso");
         }
-        if (userRepository.existsByEmail(user.getEmail())) {
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
             throw new IllegalArgumentException("El email ya está en uso");
         }
-        
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
+
+        User user = new User();
+        user.setUsername(userRequest.getUsername());
+        user.setEmail(userRequest.getEmail());
+        user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+
+        userRepository.save(user);
     }
 
     @Transactional
-    public User updateUser(Long id, User userDetails) {
-        User user = getUserById(id);
-        
-        user.setEmail(userDetails.getEmail());
-        if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
+    public void updateUser(Long id, UserRequest userRequest) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+
+                if (userRepository.existsByUsername(userRequest.getUsername()) && !user.getUsername().equals(userRequest.getUsername())) {
+            throw new IllegalArgumentException("El nombre de usuario ya está en uso");
         }
-        
-        return userRepository.save(user);
+
+        if (userRepository.existsByEmail(userRequest.getEmail()) && !user.getEmail().equals(userRequest.getEmail())) {
+            throw new IllegalArgumentException("El email ya está en uso");
+        }
+
+        user.setUsername(userRequest.getUsername());
+        user.setEmail(userRequest.getEmail());
+
+        if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+        }
+
+        userRepository.save(user);
     }
+
 
     @Transactional
     public void deleteUser(Long id) {
